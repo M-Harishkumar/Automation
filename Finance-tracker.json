@@ -1,0 +1,311 @@
+{
+  "name": "Finance-tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5970ca83-935e-40bc-b604-9cd5a41b5023",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "rAXxrvdChUoMVdMp",
+          "name": "Gmail account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "220818b0-c718-466c-ab88-0007b6be97ed",
+              "leftValue": "={{ $json.output }}",
+              "rightValue": "yes",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        560,
+        0
+      ],
+      "id": "818abc40-e80d-41b8-8ddb-4b56ce292813",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "text": "={{ $('Gmail Trigger').item.json.snippet }}",
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"Amount\": {\n      \"type\": \"string\",\n      \"description\": \"Transaction amount in numeric format (e.g., '1000.00'). Always include two decimal places. Extract from formats like 'Rs 500', 'INR 1,000', '₹250.75', etc.\"\n    },\n    \"Category\": {\n      \"type\": \"string\",\n      \"enum\": [\"Credited\", \"Debited\"],\n      \"description\": \"Type of transaction based on message keywords. Use 'Credited' if money was received, 'Debited' if money was deducted.\"\n    },\n    \"Description\": {\n      \"type\": \"string\",\n      \"description\": \"Beginner-friendly explanation of what happened in the transaction. For example: 'Money was debited via mobile banking', 'You received money from UPI transfer', 'ATM cash withdrawal', etc.\"\n    },\n    \"Vendor\": {\n      \"type\": \"string\",\n      \"description\": \"Name of the merchant, payment platform, or method used in the transaction (e.g., Amazon, ATM, Google Pay, UPI, NetBanking, MobBk). Leave blank if not mentioned clearly.\"\n    },\n    \"Date\": {\n      \"type\": \"string\",\n      \"description\": \"Transaction date and time in ISO format 'YYYY-MM-DD HH:mm'. If time is missing, use '00:00'. Extract from phrases like 'on 02-08-2025 13:34:43'.\"\n    }\n  },\n  \"required\": [\"Amount\", \"Category\", \"Description\", \"Vendor\", \"Date\"]\n}\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1.2,
+      "position": [
+        900,
+        -40
+      ],
+      "id": "f5e57b0c-c0f8-40a4-96a6-a13300b0d892",
+      "name": "Information Extractor"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        1040,
+        160
+      ],
+      "id": "008bb763-c925-43d1-9d0e-c76378f8b779",
+      "name": "Google Gemini Chat Model1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "HLcdwZxickZ7CaTG",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a smart financial SMS classifier.\n\nYour task: Check if the given message is a bank transaction alert.\n\nTransaction alerts typically include:\n- Account numbers (e.g., A/c, Acct, A/C, A/c No, **1234, x1234)\n- Transaction actions: Debited, Credited, Withdrawal, Deposit, UPI, IMPS, NEFT, RTGS, ECS\n- Monetary amounts: Rs., INR, ₹ followed by amount\n- Balance info: Avl Bal, Available balance, Bal Rs.\n- Reference numbers: Ref no, UTR no, Txn ID, Transaction ID\n- Time info: timestamps like 02-08-2025 13:34:43\n\n❗️If the message contains patterns like the above, classify as: yes  \n❗️If the message is casual, promotional, or unrelated to banking, classify as: no\n\nJust respond with: yes or no (lowercase)\n\nMessage: \"{{ $json.snippet }}\"\n",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        220,
+        0
+      ],
+      "id": "4dd6380e-3003-4a14-9fea-e12ed2b06701",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        240,
+        220
+      ],
+      "id": "e6448767-c808-447f-b0d7-783a2e70958d",
+      "name": "Google Gemini Chat Model2",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "HLcdwZxickZ7CaTG",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1lwZT2TynGi-BN17ijfYDorU3oBFZmdh57klITIt6rYc",
+          "mode": "list",
+          "cachedResultName": "Bank- Transactions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lwZT2TynGi-BN17ijfYDorU3oBFZmdh57klITIt6rYc/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1lwZT2TynGi-BN17ijfYDorU3oBFZmdh57klITIt6rYc/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Amount": "={{ $json.output.Amount }}",
+            "catgory": "={{ $json.output.Category }}",
+            "Descrition ": "={{ $json.output.Description }}",
+            "Date ": "={{ $json.output.Date }}",
+            "vendor ": "={{ $json.output.Vendor }}"
+          },
+          "matchingColumns": [
+            "Amount"
+          ],
+          "schema": [
+            {
+              "id": "Date ",
+              "displayName": "Date ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "catgory",
+              "displayName": "catgory",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Descrition ",
+              "displayName": "Descrition ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "vendor ",
+              "displayName": "vendor ",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        1280,
+        -20
+      ],
+      "id": "d961f37f-573e-4d3b-8fb5-f5c131320f83",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "GJBFNH8vkj1SIoHI",
+          "name": "Google Sheets account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "0ee8e3a8-4be8-4e91-a2f8-34961c18765d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "58fd5c7e99969a3adef0150c6d21eaca5942483cae496759ab054492d770216f"
+  },
+  "id": "IMeDouFE3rQwnvaV",
+  "tags": []
+}
